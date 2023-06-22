@@ -7,7 +7,6 @@ inputs:
   container-sign-kms-key-arn:
     description: "The secret with the ARN of the key to sign container images e.g. secrets.CONTAINER_SIGN_KMS_KEY"
     required: false
-    default: "none"
   build-and-push-image-only:
     description: "Only run docker build, push and signing steps. Skip packaging and artifact uploads"
     required: false
@@ -17,9 +16,11 @@ inputs:
     required: false
     default: template.yaml
   working-directory:
-    description: "The working directory containing the app"
+    description: "Deprecated - use sam-base-directory instead"
     required: false
-    default: .
+  sam-base-directory:
+    description: "The base directory to use when building the SAM app; defaults to the template file's location"
+    required: false
   artifact-bucket-name:
     description: "The secret with the name of the artifact S3 bucket (required) eg secrets.ARTIFACT_SOURCE_BUCKET_NAME"
     required: true
@@ -36,7 +37,6 @@ inputs:
   docker-platform:
     description: The target architecture for the image build
     required: false
-    default: ""
   checkout-repo:
     description: Checks out the repo as the first step of the action. Default "true".
     required: false
@@ -44,23 +44,19 @@ inputs:
   private-docker-registry:
     description: Private Docker registry URL
     required: false
-    default: ""
   private-docker-login-username:
     description: Login username to the private docker registry
     required: false
-    default: ""
   private-docker-login-password:
     description: Login password to the private docker registry
     required: false
-    default: ""
   push-latest-tag:
-    description: Float 'latest' tag to the latest image version. This requires tag immutability disabled, a typical use case is test-image-repository containers
+    description: Float 'latest' tag to the latest image version. This requires tag immutability disabled (e.g. for test image repositories)
     required: false
     default: "false"
   version-number:
-    description: The version number of the application being deployed. This defaults to ""'
+    description: The version number of the application being deployed
     required: false
-    default: ""
 
 runs:
   using: "composite"
@@ -73,7 +69,7 @@ runs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v5
       with:
-        python-version: "3.8"
+        python-version: 3.8
 
     - name: Set up AWS creds
       uses: aws-actions/configure-aws-credentials@v4
@@ -85,10 +81,10 @@ runs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
       with:
-        mask-password: "true" # pragma: allowlist secret
+        mask-password: true
 
     - name: Login to private Docker Registry
-      if: ${{ inputs.private-docker-registry != '' }}
+      if: ${{ inputs.private-docker-registry != null }}
       uses: docker/login-action@v3
       with:
         registry: ${{ inputs.private-docker-registry }}
@@ -96,19 +92,20 @@ runs:
         password: ${{ inputs.private-docker-login-password }}
 
     - name: Install Cosign
+      if: ${{ inputs.container-sign-kms-key-arn != null }}
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: "v1.9.0"
+        cosign-release: v1.9.0
 
     - name: Upload Fargates to S3
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
         GITHUB_SHA: ${{ github.sha }}
-        PUSH_LATEST_TAG: ${{ inputs.push-latest-tag }}
-        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only }}
-        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        PUSH_LATEST_TAG: ${{ inputs.push-latest-tag == 'true' }}
+        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only == 'true'}}
         TEMPLATE_FILE: ${{ inputs.template-file }}
+        SAM_BASE_DIR: ${{ inputs.sam-base-directory || inputs.working-directory }}
         ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
         ARTIFACT_BUCKET_NAME: ${{ inputs.artifact-bucket-name }}
         DOCKERFILE: ${{ inputs.dockerfile }}
