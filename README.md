@@ -23,7 +23,7 @@ Pull in the action in your workflow as below, making sure to specify the release
 
 ```yaml
 - name: Deploy SAM app to ECR
-  uses: alphagov/di-devplatform-upload-action-ecr@<version_number>
+  uses: govuk-one-login/devplatform-upload-action-ecr@<version_number>
   with:
     artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}
     container-sign-kms-key-arn: ${{ secrets.CONTAINER_SIGN_KMS_KEY }}
