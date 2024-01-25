@@ -15,6 +15,7 @@ The action packages, signs, and uploads the application to the specified ECR and
 | role-to-assume-arn         | true     | The secret with the GitHub Role ARN from the pipeline stack                            | arn:aws:iam::0123456789999:role/myawesomeapppipeline-GitHubActionsRole-16HIKMTBBDL8Y |
 | ecr-repo-name              | true     | The secret with the name of the ECR repo created by the app-container-repository stack | app-container-repository-tobytraining-containerrepository-i6gdfkdnwrrm               |
 | dockerfile                 | false     | The Dockerfile to use for the build | Dockerfile
+| docker-build-path          | false     | The Dockerfile path to use for the build | Docker-build-path
 | checkout-repo                 | false     | Checks out the repo as the first step of the action. Default "true". | "true"
 | private-docker-registry | false | Private Docker registry URL. Default to "" | "abc12345.live.dynatrace.com"
 | private-docker-login-username | false | Login username to the private docker registry | "abc12345"
