@@ -8,7 +8,12 @@ fi
 
 echo "Building image"
 
-docker build -t "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" -f "$DOCKER_BUILD_PATH"/"$DOCKERFILE" "$DOCKER_BUILD_PATH"
+docker build \
+    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    --platform "${DOCKER_PLATFORM}" \
+    --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
+    "$DOCKER_BUILD_PATH"
+
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
