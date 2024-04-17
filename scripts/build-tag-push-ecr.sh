@@ -17,13 +17,17 @@ else
     echo "No platform option supplied, using defaults."
 fi
 
-docker build \
+docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
+docker buildx inspect --bootstrap
+
+docker buildx build \
+    --push \
     --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
     $PLATFORM_OPTION \
     --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
     "$DOCKER_BUILD_PATH"
 
-docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+# docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
