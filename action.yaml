@@ -32,7 +32,7 @@ inputs:
   docker-platform:
     description: The target architecture for the image build
     required: false
-    default: "linux/amd64"
+    default: ""
   checkout-repo:
     description: Checks out the repo as the first step of the action. Default "true".
     required: false
