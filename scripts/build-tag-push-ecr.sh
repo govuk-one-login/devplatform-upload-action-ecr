@@ -8,7 +8,21 @@ fi
 
 echo "Building image"
 
-docker build -t "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" -f "$DOCKER_BUILD_PATH"/"$DOCKERFILE" "$DOCKER_BUILD_PATH"
+PLATFORM_OPTION=""
+
+if [ -n "${DOCKER_PLATFORM}" ]; then
+    echo "Using platform option as --platform ${DOCKER_PLATFORM}"
+    PLATFORM_OPTION="--platform ${DOCKER_PLATFORM}"
+else
+    echo "No platform option supplied, using defaults."
+fi
+
+docker build \
+    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    $PLATFORM_OPTION \
+    --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
+    "$DOCKER_BUILD_PATH"
+
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then

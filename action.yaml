@@ -29,6 +29,10 @@ inputs:
   docker-build-path:
     description: The Dockerfile path to use for the build
     required: false
+  docker-platform:
+    description: The target architecture for the image build
+    required: false
+    default: ""
   checkout-repo:
     description: Checks out the repo as the first step of the action. Default "true".
     required: false
@@ -69,7 +73,7 @@ runs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
       with:
-          mask-password: 'true'                            # pragma: allowlist secret
+        mask-password: "true" # pragma: allowlist secret
 
     - name: Login to private Docker Registry
       if: ${{ inputs.private-docker-registry != '' }}
@@ -82,7 +86,7 @@ runs:
     - name: Install Cosign
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v1.9.0'
+        cosign-release: "v1.9.0"
 
     - name: Upload Fargates to S3
       env:
@@ -95,6 +99,7 @@ runs:
         ARTIFACT_BUCKET_NAME: ${{ inputs.artifact-bucket-name }}
         DOCKERFILE: ${{ inputs.dockerfile }}
         DOCKER_BUILD_PATH: ${{ inputs.docker-build-path }}
+        DOCKER_PLATFORM: ${{ inputs.docker-platform }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
 
       run: ${{ github.action_path }}/scripts/build-tag-push-ecr.sh
