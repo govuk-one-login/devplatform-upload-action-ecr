@@ -33,8 +33,8 @@ fi
 GIT_TAG=$(git describe --tags --first-parent --always)
 # Cleaning the commit message to remove special characters
 COMMIT_MSG=$(echo $COMMIT_MESSAGE | tr '\n' ' ' | tr -dc '[:alnum:]- ' | cut -c1-50)
-# Gets merge time to main
-MERGE_TIME=$(git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M:%S')
+# Gets merge time to main - displaying it in UTC timezone
+MERGE_TIME=$(TZ=UTC0 git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M:%S')
 
 # Sanitise commit message and search for canary deployment instructions
 MSG=$(echo $COMMIT_MESSAGE | tr '\n' ' ' | tr '[:upper:]' '[:lower:]')
