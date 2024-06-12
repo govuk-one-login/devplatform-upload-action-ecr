@@ -11,19 +11,31 @@ echo "Building image"
 PLATFORM_OPTION=""
 
 if [ -n "${DOCKER_PLATFORM}" ]; then
-    echo "Using platform option as --platform ${DOCKER_PLATFORM}"
-    PLATFORM_OPTION="--platform ${DOCKER_PLATFORM}"
+echo "Using platform option as --platform ${DOCKER_PLATFORM}"
+PLATFORM_OPTION="--platform ${DOCKER_PLATFORM}"
 else
-    echo "No platform option supplied, using defaults."
+echo "No platform option supplied, using defaults."
+fi
+
+# Reading from .nvmrc
+NODE_VERSION=$(awk 'NR==1' .nvmrc)
+NODE_INDEX_DIGEST=$(awk 'NR==2' .nvmrc)
+
+# If values exist, create build arguments
+if [ -n "$NODE_VERSION" ]; then
+    NODE_VERSION_ARG="--build-arg NODE_VERSION=$NODE_VERSION"
+fi
+if [ -n "$NODE_INDEX_DIGEST" ]; then
+    NODE_INDEX_DIGEST_ARG="--build-arg NODE_INDEX_DIGEST=$NODE_INDEX_DIGEST"
 fi
 
 docker build \
-    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
-    $PLATFORM_OPTION \
-    --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
-    "$DOCKER_BUILD_PATH"
-
-docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+--tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+$PLATFORM_OPTION \
+$NODE_VERSION_ARG \
+$NODE_INDEX_DIGEST_ARG \
+--file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
+"$DOCKER_BUILD_PATH"
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
