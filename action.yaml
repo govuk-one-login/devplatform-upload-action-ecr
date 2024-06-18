@@ -49,6 +49,10 @@ inputs:
     description: Login password to the private docker registry
     required: false
     default: ""
+  version-number:
+    description: The version number of the application being deployed. This defaults to ""'
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -102,6 +106,6 @@ runs:
         DOCKER_PLATFORM: ${{ inputs.docker-platform }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         GITHUB_ACTOR: ${{ github.actor }}
-
+        VERSION_NUMBER: ${{ inputs.version-number }}
       run: ${{ github.action_path }}/scripts/build-tag-push-ecr.sh
       shell: bash
