@@ -56,6 +56,12 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
     else
         echo "WARNING!!! Image placeholder text \"CONTAINER-IMAGE-PLACEHOLDER\" not found - uploading template anyway"
     fi
+
+    if grep -q "GIT_SHA_PLACEHOLDER" cf-template.yaml; then
+        echo "Replacing \"GIT_SHA_PLACEHOLDER\" with new ECR image tag"
+        sed -i "s|GIT_SHA_PLACEHOLDER|$GITHUB_SHA|" cf-template.yaml
+    fi
+
     zip template.zip cf-template.yaml
     aws s3 cp template.zip "s3://$ARTIFACT_BUCKET_NAME/template.zip" --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG,mergetime=$MERGE_TIME,skipcanary=$SKIP_CANARY_DEPLOYMENT,commitauthor='$GITHUB_ACTOR',release=$VERSION_NUMBER"
 fi
