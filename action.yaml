@@ -8,6 +8,10 @@ inputs:
     description: "The secret with the ARN of the key to sign container images e.g. secrets.CONTAINER_SIGN_KMS_KEY"
     required: false
     default: "none"
+  build-and-push-image-only:
+    description: "Only run docker build, push and signing steps. Skip packaging and artifact uploads"
+    required: false
+    default: "false"
   template-file:
     description: "The name of the CF template for the application. This defaults to template.yaml"
     required: false
@@ -97,6 +101,7 @@ runs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
         GITHUB_SHA: ${{ github.sha }}
+        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only}}
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         TEMPLATE_FILE: ${{ inputs.template-file }}
         ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
