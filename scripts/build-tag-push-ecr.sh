@@ -17,13 +17,23 @@ else
     echo "No platform option supplied, using defaults."
 fi
 
+TAG_OPTION=""
+if [ "$PUSH_LATEST_TAG" == "true" ]; then
+    echo "Tagging option supplied $ECR_REGISTRY/$ECR_REPO_NAME:latest"
+    TAG_OPTION="--tag $ECR_REGISTRY/$ECR_REPO_NAME:latest"
+fi
+
 docker build \
     --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    $TAG_OPTION \
     $PLATFORM_OPTION \
     --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
     "$DOCKER_BUILD_PATH"
 
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+if [ "$PUSH_LATEST_TAG" == "true" ]; then
+    docker push "$ECR_REGISTRY/$ECR_REPO_NAME:latest"
+fi
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"

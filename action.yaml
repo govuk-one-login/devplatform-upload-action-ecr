@@ -53,6 +53,10 @@ inputs:
     description: Login password to the private docker registry
     required: false
     default: ""
+  push-latest-tag:
+    description: Float 'latest' tag to the latest image version. This requires tag immutability disabled, a typical use case are test-image-repository containers
+    required: false
+    default: "false"
   version-number:
     description: The version number of the application being deployed. This defaults to ""'
     required: false
@@ -101,7 +105,8 @@ runs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
         GITHUB_SHA: ${{ github.sha }}
-        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only}}
+        PUSH_LATEST_TAG: ${{ inputs.push-latest-tag }}
+        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only }}
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
         TEMPLATE_FILE: ${{ inputs.template-file }}
         ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
