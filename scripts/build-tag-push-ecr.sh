@@ -67,9 +67,9 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
         echo "WARNING!!! Image placeholder text \"CONTAINER-IMAGE-PLACEHOLDER\" not found - uploading template anyway"
     fi
 
-    if grep -q "GIT_SHA_PLACEHOLDER" cf-template.yaml; then
-        echo "Replacing \"GIT_SHA_PLACEHOLDER\" with new ECR image tag"
-        sed -i "s|GIT_SHA_PLACEHOLDER|$GITHUB_SHA|" cf-template.yaml
+    if grep -q "GIT-SHA-PLACEHOLDER" cf-template.yaml; then
+        echo "Replacing \"GIT-SHA-PLACEHOLDER\" with new ECR image tag"
+        sed -i "s|GIT-SHA-PLACEHOLDER|$GITHUB_SHA|" cf-template.yaml
     fi
 
     zip template.zip cf-template.yaml

@@ -54,7 +54,7 @@ inputs:
     required: false
     default: ""
   push-latest-tag:
-    description: Float 'latest' tag to the latest image version. This requires tag immutability disabled, a typical use case are test-image-repository containers
+    description: Float 'latest' tag to the latest image version. This requires tag immutability disabled, a typical use case is test-image-repository containers
     required: false
     default: "false"
   version-number:
