@@ -60,6 +60,25 @@ NOTE: In regards to Dependabot subcribers, Dependabot does not pick up and raise
 
 Release a new major version as normal following semantic versioning.
 
+### Bug fixes
+
+Once the bug is fixed and a new release happens, make sure to float tags affected by the bug to the latest stable commmit.
+For example, let's say v2.3.1 has a bug and v2.3.2 contains the fix:
+
+:bug: v2.3.1 `abcd001`
+
+:white_check_mark: v2.3.2 `dcba002`
+
+To edit the v2.3.1 tag:
+```
+git tag v2.3.1 dcba002 -f
+git push origin v2.3.1 -f
+```
+
+:white_check_mark: v2.3.1 `dcba002`
+
+:white_check_mark: v2.3.2 `dcba002`
+
 ### Preparing a release
 
 When working on a PR branch, create a release with the target version, but append -beta to the post-fix tag name.
