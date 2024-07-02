@@ -44,3 +44,7 @@ repos:
     rev: 'v6.2.1'
     hooks:
       - id: beautysh
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.4
+    hooks:
+      - id: codespell
