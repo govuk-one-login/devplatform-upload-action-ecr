@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: detect-private-key
       - id: detect-aws-credentials
-        args: ['--allow-missing-credentials']
+        args: ["--allow-missing-credentials"]
       - id: mixed-line-ending
       - id: trailing-whitespace
       - id: check-merge-conflict
@@ -16,15 +16,15 @@ repos:
     rev: v1.2.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+        args: ["--baseline", ".secrets.baseline"]
         exclude: (?x)(
-                    .*/keys/.*|
-                     ^package-lock.json$/|
-                     ^Pipfile/|
-                     ^pyproject.toml
-              )
+          .*/keys/.*|
+          ^package-lock.json$/|
+          ^Pipfile/|
+          ^pyproject.toml
+          )
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.1.13
+    rev: v1.5.5
     hooks:
       - id: remove-tabs
       - id: remove-crlf
@@ -38,12 +38,23 @@ repos:
     hooks:
       - id: commitlint
         stages: [commit-msg]
-        args: ['--verbose']
+        args: ["--verbose"]
         verbose: true
-  - repo: https://github.com/lovesegfault/beautysh
-    rev: 'v6.2.1'
+  - repo: local
     hooks:
-      - id: beautysh
+      - id: shfmt
+        name: shfmt (shell scripts)
+        language: golang
+        additional_dependencies:
+          - mvdan.cc/sh/v3/cmd/shfmt@v3.8.0
+        entry: shfmt
+        stages: [commit]
+        types:
+          - file
+          - shell
+        exclude_types:
+          - zsh
+        args: ["-w", "-s", "-l"]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.4
     hooks:
