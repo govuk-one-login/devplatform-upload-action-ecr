@@ -24,19 +24,19 @@ if [ "$PUSH_LATEST_TAG" == "true" ]; then
 fi
 
 docker build \
-    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA/$GITHUB_RUN_ID" \
     $TAG_OPTION \
     $PLATFORM_OPTION \
     --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
     "$DOCKER_BUILD_PATH"
 
-docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA/$GITHUB_RUN_ID"
 if [ "$PUSH_LATEST_TAG" == "true" ]; then
     docker push "$ECR_REGISTRY/$ECR_REPO_NAME:latest"
 fi
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
-    cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+    cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA/$GITHUB_RUN_ID"
 fi
 
 if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
@@ -62,7 +62,7 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
 
     if grep -q "CONTAINER-IMAGE-PLACEHOLDER" cf-template.yaml; then
         echo "Replacing \"CONTAINER-IMAGE-PLACEHOLDER\" with new ECR image ref"
-        sed -i "s|CONTAINER-IMAGE-PLACEHOLDER|$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA|" cf-template.yaml
+        sed -i "s|CONTAINER-IMAGE-PLACEHOLDER|$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA/$GITHUB_RUN_ID|" cf-template.yaml
     else
         echo "WARNING!!! Image placeholder text \"CONTAINER-IMAGE-PLACEHOLDER\" not found - uploading template anyway"
     fi
