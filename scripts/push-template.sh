@@ -40,5 +40,5 @@ OBJECT_VERSION="$(aws s3api put-object \
   --body template.zip \
   --metadata "repository=${GITHUB_REPOSITORY},commitsha=${GITHUB_SHA},committag=${GIT_TAG},commitmessage=${COMMIT_MSG},mergetime=${MERGE_TIME},skipcanary=${SKIP_CANARY_DEPLOYMENT},commitauthor='${GITHUB_ACTOR}',release=${VERSION_NUMBER}" \
   --query VersionId --output text)"
-echo "::notice title=Template uploaded to S3::ecr_repo: ${ECR_REPO_NAME}, object: template.zip, version: ${OBJECT_VERSION}"
+echo "::notice title=Template uploaded to S3::object: template.zip, version: ${OBJECT_VERSION}"
 echo "version_id=${OBJECT_VERSION}" >> "${GITHUB_OUTPUT}"
