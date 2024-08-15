@@ -173,5 +173,5 @@ runs:
         GITHUB_ACTOR: ${{ github.actor }}
         VERSION_NUMBER: ${{ inputs.version-number }}
         ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
-      run: ${{ github.action_path }}/scripts/push-ecr.sh
+      run: ${{ github.action_path }}/scripts/push-template.sh
       shell: bash
