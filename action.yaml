@@ -12,6 +12,9 @@ inputs:
     description: "Only run docker build, push and signing steps. Skip packaging and artifact uploads"
     required: false
     default: "false"
+  build-contexts:
+    description: "List of additional build contexts (e.g., name=path)"
+    required: false
   template-file:
     description: "The name of the CF template for the application. This defaults to template.yaml"
     required: false
@@ -26,6 +29,9 @@ inputs:
   ecr-repo-name:
     description: "The secret with the name of the ECR Repo (required) eg secrets.ECR_REPOSITORY"
     required: true
+  ecr-cache-repo-name:
+    description: "The secret with the name of the ECR Cache Repo eg secrets.ECR_CACHE_REPOSITORY"
+    default: ""
   dockerfile:
     description: The Dockerfile to use for the build
     required: false
@@ -61,61 +67,113 @@ inputs:
     description: The version number of the application being deployed. This defaults to ""'
     required: false
     default: ""
-
+outputs:
+  image-tags:
+    description: "List of image tags that were pushed"
+    value: ${{ steps.docker_meta.outputs.tags }}
+  image-digest:
+    description: "Digest of the container image"
+    value: ${{ steps.docker_build.outputs.digest }}
+  s3-object-version-id:
+    description: "Version ID of the object in S3"
+    value: ${{ steps.s3_upload.outputs.version_id }}
 runs:
   using: "composite"
 
   steps:
     - name: Checkout repo
       if: ${{ inputs.checkout-repo == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+    - name: Set up Docker buildx
+      uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.1
       with:
         python-version: "3.8"
 
     - name: Set up AWS creds
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
       with:
         role-to-assume: ${{ inputs.role-to-assume-arn }}
         aws-region: eu-west-2
 
     - name: Login to Amazon ECR
       id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
       with:
         mask-password: "true" # pragma: allowlist secret
 
     - name: Login to private Docker Registry
       if: ${{ inputs.private-docker-registry != '' }}
-      uses: docker/login-action@v3
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
       with:
         registry: ${{ inputs.private-docker-registry }}
         username: ${{ inputs.private-docker-login-username }}
         password: ${{ inputs.private-docker-login-password }}
+
+    - name: Build image metadata
+      id: docker_meta
+      if: github
+      uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+      with:
+        images: |
+          "${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr-repo-name }}"
+        tags: |
+          type=sha,prefix=,suffix=,format=long,priority=9000
+          type=raw,value=latest,enable=${{ inputs.push-latest-tag }}
+
+    - name: Build, tag and push image
+      id: docker_build
+      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
+      env:
+        CONTEXT: ${{ inputs.docker-build-path != '' && inputs.docker-build-path || inputs.working-directory }}
+        CACHE_IMAGE: ${{ inputs.ecr-cache-repo-name != '' && format('{0}/{1}:{2}-cache', steps.login-ecr.outputs.registry, inputs.ecr-cache-repo-name, inputs.ecr-repo-name) || '' }}
+      with:
+        context: ${{ env.CONTEXT }}
+        build-contexts: ${{ inputs.build-contexts }}
+        file: ${{ env.CONTEXT }}/${{ inputs.dockerfile }}
+        push: true
+        labels: ${{ steps.docker_meta.outputs.labels }}
+        tags: ${{ steps.docker_meta.outputs.tags }}
+        platforms: ${{ inputs.docker-platform }}
+        provenance: false # needed because ECR displays image manifests in a confusing way - should we expose this as an input to the action?
+        cache-from: ${{ env.CACHE_IMAGE && format('type=registry,ref={0}', env.CACHE_IMAGE) || '' }}
+        cache-to: ${{ env.CACHE_IMAGE && format('mode=max,image-manifest=true,oci-mediatypes=true,type=registry,ref={0}', env.CACHE_IMAGE) || '' }}
 
     - name: Install Cosign
       uses: sigstore/cosign-installer@main
       with:
         cosign-release: "v1.9.0"
 
-    - name: Upload Fargates to S3
+    - name: Sign the image
+      if: ${{ inputs.container-sign-kms-key-arn != 'none' }}
       env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        TAGS: ${{ steps.docker_meta.outputs.tags }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
+        DIGEST: ${{ steps.docker_build.outputs.digest }}
+      shell: bash
+      run: |
+        images=""
+        for tag in ${TAGS}; do
+          images+="${tag}@${DIGEST} "
+        done
+        cosign sign --yes --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" ${images}
+
+    - name: Upload Fargates to S3
+      id: s3_upload
+      if: ${{ inputs.build-and-push-image-only != 'true' }}
+      working-directory: ${{ inputs.working-directory }}
+      env:
         GITHUB_SHA: ${{ github.sha }}
-        PUSH_LATEST_TAG: ${{ inputs.push-latest-tag }}
-        BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only }}
-        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        DOCKER_TAG: ${{ fromJSON(steps.docker_meta.outputs.json).tags[0] }}
         TEMPLATE_FILE: ${{ inputs.template-file }}
-        ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
         ARTIFACT_BUCKET_NAME: ${{ inputs.artifact-bucket-name }}
-        DOCKERFILE: ${{ inputs.dockerfile }}
-        DOCKER_BUILD_PATH: ${{ inputs.docker-build-path }}
-        DOCKER_PLATFORM: ${{ inputs.docker-platform }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         GITHUB_ACTOR: ${{ github.actor }}
         VERSION_NUMBER: ${{ inputs.version-number }}
-      run: ${{ github.action_path }}/scripts/build-tag-push-ecr.sh
+      run: ${{ github.action_path }}/scripts/push-template.sh
       shell: bash
