@@ -7,7 +7,7 @@ set -eu
 
 $PUSH_LATEST_TAG && CUSTOM_TAG=latest
 
-echo "Building image"
+echo "::group::Building image"
 
 docker build \
   ${DOCKER_PLATFORM:+--platform $DOCKER_PLATFORM} \
@@ -16,11 +16,16 @@ docker build \
   --file "$DOCKERFILE" \
   "$DOCKER_BUILD_PATH"
 
+echo "::endgroup::"
+echo "::group::Pushing image"
+
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
 
 if [[ $CUSTOM_TAG ]]; then
   docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$CUSTOM_TAG"
 fi
+
+echo "::endgroup::"
 
 if [[ $CONTAINER_SIGN_KMS_KEY_ARN ]]; then
   cosign sign --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
@@ -45,9 +50,10 @@ else
   SKIP_CANARY_DEPLOYMENT=0
 fi
 
-echo "Running sam build on template file"
+echo "::group::Building SAM app"
 sam build --template-file="$TEMPLATE_FILE" ${SAM_BASE_DIR:+--base-dir=$SAM_BASE_DIR}
 mv .aws-sam/build/template.yaml cf-template.yaml
+echo "::endgroup::"
 
 if grep -q "CONTAINER-IMAGE-PLACEHOLDER" cf-template.yaml; then
   echo "Replacing 'CONTAINER-IMAGE-PLACEHOLDER' with new ECR image ref"
