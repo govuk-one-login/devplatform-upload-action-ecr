@@ -30,14 +30,16 @@ $BUILD_AND_PUSH_IMAGE_ONLY && exit
 
 # This only gets set if there is a tag on the current commit.
 GIT_TAG=$(git describe --tags --first-parent --always)
+
 # Cleaning the commit message to remove special characters
-COMMIT_MSG=$(echo $COMMIT_MESSAGE | tr '\n' ' ' | tr -dc '[:alnum:]- ' | cut -c1-50)
-# Gets merge time to main - displaying it in UTC timezone
-MERGE_TIME=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:'%Y-%m-%d %H:%M:%S')
+COMMIT_MSG=$(echo "$COMMIT_MESSAGE" | tr "\n" " " | tr -dc "[:alnum:]- " | cut -c1-50)
+
+# Gets merge to main UTC timestamp
+MERGE_TIME=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:"%Y-%m-%d %H:%M:%S")
 
 # Sanitise commit message and search for canary deployment instructions
-MSG=$(echo $COMMIT_MESSAGE | tr '\n' ' ' | tr '[:upper:]' '[:lower:]')
-if [[ $MSG =~ "[skip canary]" || $MSG =~ "[canary skip]" || $MSG =~ "[no canary]" ]]; then
+MSG=$(echo "$COMMIT_MESSAGE" | tr "\n" " " | tr "[:upper:]" "[:lower:]")
+if [[ $MSG =~ \[(skip canary|no canary|canary skip)\] ]]; then
   SKIP_CANARY_DEPLOYMENT=1
 else
   SKIP_CANARY_DEPLOYMENT=0
@@ -48,7 +50,7 @@ sam build --template-file="$TEMPLATE_FILE" ${SAM_BASE_DIR:+--base-dir=$SAM_BASE_
 mv .aws-sam/build/template.yaml cf-template.yaml
 
 if grep -q "CONTAINER-IMAGE-PLACEHOLDER" cf-template.yaml; then
-  echo "Replacing \"CONTAINER-IMAGE-PLACEHOLDER\" with new ECR image ref"
+  echo "Replacing 'CONTAINER-IMAGE-PLACEHOLDER' with new ECR image ref"
   sed -i "s|CONTAINER-IMAGE-PLACEHOLDER|$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA|" cf-template.yaml
 elif grep -q "GIT-SHA-PLACEHOLDER" cf-template.yaml; then
   echo "Replacing 'GIT-SHA-PLACEHOLDER' with new ECR image tag"

@@ -1,20 +1,26 @@
 ## Description
 
 ### Ticket number
+
 [PSREDEV-XXX]
 
 ## GitHub Action Releases
 
-We follow [recommended best practices](https://docs.github.com/en/actions/creating-actions/releasing-and-maintaining-actions) for releasing new versions of the action.
+We
+follow [recommended best practices](https://docs.github.com/en/actions/creating-actions/releasing-and-maintaining-actions)
+for releasing new versions of the action.
 
-### Non-breaking Changes:
-Release a new minor or patch version as appropriate. Then, update the base major version release (and any minor versions)
-to point to this latest commit. For example, if the latest major release is v2 and you have added a non-breaking feature,
-release v2.1.0 and point v2 to the same commit as v2.1.0.
+### Non-breaking changes
 
-NOTE: Dependabot does not pick up and raise PRs for `PATCH` versions (i.e v3.8.1), please notify teams in the relevant slack channels.
+Release a new minor or patch version as appropriate. Then, update the base major version release (and any minor
+versions) to point to this latest commit. For example, if the latest major release is v2, and you have added a
+non-breaking feature, release v2.1.0 and point v2 to the same commit as v2.1.0.
 
-### Breaking Changes:
+NOTE: Dependabot does not pick up and raise PRs for `PATCH` versions (i.e. v3.8.1), please notify teams in the relevant
+Slack channels.
+
+### Breaking changes
+
 Release a new major version as normal following semantic versioning.
 
 ## Checklist
@@ -26,15 +32,15 @@ Release a new major version as normal following semantic versioning.
 - [ ] I have updated the changelog
 
 - [ ] I have tested this and added output to Jira
-**_Comment:_**
+  **_Comment:_**
 
 - [ ] Automated tests added
-**_Comment:_**
+  **_Comment:_**
 
 - [ ] Documentation added ([link]())
-**_Comment:_**
+  **_Comment:_**
 
 - [ ] Delete any new stacks created for this ticket
-**_Comment:_**
+  **_Comment:_**
 
 ### Co-authored by
