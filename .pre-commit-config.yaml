@@ -6,28 +6,27 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      - id: check-yaml
       - id: detect-private-key
       - id: detect-aws-credentials
         args: ["--allow-missing-credentials"]
       - id: mixed-line-ending
+        args: ["--fix", "lf"]
+      - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: (?x)(
-            .*/keys/.*|
-            ^package-lock.json$/|
-            ^Pipfile/|
-            ^pyproject.toml
-          )
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
       - id: remove-tabs
-      - id: remove-crlf
+        args: [--whitespaces-count, "2"]
   - repo: https://github.com/mattlqx/pre-commit-search-and-replace
     rev: v1.1.8
     hooks:
@@ -40,12 +39,12 @@ repos:
         stages: [commit-msg]
         args: ["--verbose"]
         verbose: true
-  - repo: https://github.com/lovesegfault/beautysh
-    rev: v6.2.1
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-2
     hooks:
-      - id: beautysh
-        args: ["--indent-size", "2"]
+      - id: shfmt
+        args: ["--space-redirects", "--case-indent", "--indent", "2"]
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.4.1
     hooks:
       - id: codespell
