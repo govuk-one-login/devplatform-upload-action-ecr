@@ -1,4 +1,3 @@
----
 # See: https://commitlint.js.org/#/reference-rules
 rules:
   body-leading-blank: [2, 'always']
@@ -10,5 +9,5 @@ rules:
   trailer-exists: [1, 'always', 'Co-authored-by:']
 parserPreset:
   parserOpts:
-    # sets the prefix that references-empty will look for
-    issuePrefixes: ['PSREDEV-','PLAT-']
+    # Sets the prefix that references-empty will look for
+    issuePrefixes: ['PSREDEV-', 'PLAT-']

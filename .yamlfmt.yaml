@@ -1,0 +1,4 @@
+formatter:
+  type: basic
+  trim_trailing_whitespace: true
+  retain_line_breaks_single: true
