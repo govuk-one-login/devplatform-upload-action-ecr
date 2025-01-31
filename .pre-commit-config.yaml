@@ -48,7 +48,18 @@ repos:
     rev: v2.4.1
     hooks:
       - id: codespell
-  - repo: https://github.com/google/yamlfmt
-    rev: v0.15.0
+  #  - repo: https://github.com/google/yamlfmt
+  #    rev: v0.15.0
+  #    hooks:
+  #      - id: yamlfmt
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.19.0
     hooks:
-      - id: yamlfmt
+      - id: eslint
+        types: [yaml]
+        args: ["--fix"]
+        additional_dependencies:
+          - eslint-plugin-yml@1.16.0
+          - eslint@9.19.0
+
+# files: \.ya?ml$

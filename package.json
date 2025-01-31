@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^9.19.0",
+    "eslint-plugin-yml": "^1.16.0"
+  }
+}
