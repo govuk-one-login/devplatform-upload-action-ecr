@@ -115,6 +115,7 @@ runs:
         DOCKER_BUILD_PATH: ${{ inputs.docker-build-path }}
         DOCKER_PLATFORM: ${{ inputs.docker-platform }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        COMMIT_MESSAGES: ${{ join(github.event.commits.*.message, ' | ') }}
         GITHUB_ACTOR: ${{ github.actor }}
         VERSION_NUMBER: ${{ inputs.version-number }}
       run: ${{ github.action_path }}/scripts/build-tag-push-ecr.sh
