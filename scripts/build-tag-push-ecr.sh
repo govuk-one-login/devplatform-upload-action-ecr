@@ -48,11 +48,17 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
     MERGE_TIME=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:'%Y-%m-%d %H:%M:%S')
 
     # Sanitise commit message and search for canary deployment instructions
-    MSG=$(echo $COMMIT_MESSAGE | tr '\n' ' ' | tr '[:upper:]' '[:lower:]')
+    MSG=$(echo $COMMIT_MESSAGES | tr '\n' ' ' | tr '[:upper:]' '[:lower:]')
     if [[ $MSG =~ "[skip canary]" || $MSG =~ "[canary skip]" || $MSG =~ "[no canary]" ]]; then
         SKIP_CANARY_DEPLOYMENT=1
     else
         SKIP_CANARY_DEPLOYMENT=0
+    fi
+
+    if [[ $MSG =~ "[close circuit breaker]" || $MSG =~ "[end circuit breaker]" ]]; then
+        CLOSE_CIRCUIT_BREAKER=1
+    else
+        CLOSE_CIRCUIT_BREAKER=0
     fi
 
     echo "Running sam build on template file"
@@ -73,5 +79,5 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
     fi
 
     zip template.zip cf-template.yaml
-    aws s3 cp template.zip "s3://$ARTIFACT_BUCKET_NAME/template.zip" --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG,mergetime=$MERGE_TIME,skipcanary=$SKIP_CANARY_DEPLOYMENT,commitauthor='$GITHUB_ACTOR',release=$VERSION_NUMBER"
+    aws s3 cp template.zip "s3://$ARTIFACT_BUCKET_NAME/template.zip" --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG,mergetime=$MERGE_TIME,skipcanary=$SKIP_CANARY_DEPLOYMENT,commitauthor='$GITHUB_ACTOR',release=$VERSION_NUMBER,closecircuitbreaker=$CLOSE_CIRCUIT_BREAKER"
 fi
