@@ -34,12 +34,18 @@ if [ -n "${DOCKER_TARGET}" ]; then
     TARGET_OPTION="--target ${DOCKER_TARGET}"
 fi
 
+IFS=',' read -r -a ARGS <<< "${DOCKER_BUILD_ARGS:-}"
+DOCKER_BUILD_ARGS_EXPANDED=()
+for BUILD_ARG in "${ARGS[@]}"; do
+  [[ -n "$BUILD_ARG" ]] && DOCKER_BUILD_ARGS_EXPANDED+=(--build-arg "$BUILD_ARG")
+done
 docker build \
     --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
     $TAG_OPTION \
     $PLATFORM_OPTION \
     $TARGET_OPTION \
     --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
+    "${DOCKER_BUILD_ARGS_EXPANDED[@]}" \
     "$DOCKER_BUILD_PATH"
 
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
