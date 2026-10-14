@@ -41,6 +41,10 @@ inputs:
     description: The target stage to build in a multi-stage Dockerfile
     required: false
     default: ""
+  docker-build-args:
+    description: Comma separated list of key=value pairs for build-arg option for docker build
+    required: false
+    default: ""
   checkout-repo:
     description: Checks out the repo as the first step of the action. Default "true".
     required: false
@@ -119,6 +123,7 @@ runs:
         DOCKER_BUILD_PATH: ${{ inputs.docker-build-path }}
         DOCKER_PLATFORM: ${{ inputs.docker-platform }}
         DOCKER_TARGET: ${{ inputs.docker-target }}
+        DOCKER_BUILD_ARGS: ${{ inputs.docker-build-args }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         COMMIT_MESSAGES: ${{ join(github.event.commits.*.message, ' | ') }}
         GITHUB_ACTOR: ${{ github.actor }}
