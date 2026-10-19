@@ -39,6 +39,17 @@ DOCKER_BUILD_ARGS_EXPANDED=()
 for BUILD_ARG in "${ARGS[@]}"; do
   [[ -n "$BUILD_ARG" ]] && DOCKER_BUILD_ARGS_EXPANDED+=(--build-arg "$BUILD_ARG")
 done
+IFS=',' read -r -a SECRETS <<< "${DOCKER_BUILD_SECRETS:-}"
+DOCKER_BUILD_SECRETS_EXPANDED=()
+for BUILD_SECRET in "${SECRETS[@]}"; do
+  IFS='=' read -r KEY VALUE <<<"$BUILD_SECRET"
+  if [[ -n "$KEY" && -z ${!KEY+x} ]]; then # check that KEY is nonempty and variable with the name of the value of KEY is not set
+    printf -v "$KEY" "%s" "$VALUE" # set the variable with the name of the value of KEY to the value of VALUE
+    export "$KEY" # export the variable with the name of the value of KEY
+    DOCKER_BUILD_SECRETS_EXPANDED+=(--secret id="$KEY")
+  fi
+done
+
 docker build \
     --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
     $TAG_OPTION \
@@ -46,6 +57,7 @@ docker build \
     $TARGET_OPTION \
     --file "$DOCKER_BUILD_PATH"/"$DOCKERFILE" \
     "${DOCKER_BUILD_ARGS_EXPANDED[@]}" \
+    "${DOCKER_BUILD_SECRETS_EXPANDED[@]}" \
     "$DOCKER_BUILD_PATH"
 
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
