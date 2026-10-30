@@ -29,7 +29,7 @@ the action links every image it builds back to the source repository.
 
 The following [OCI image annotation labels](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 are baked into the image config at build time. Unlike the S3 object metadata (which stays with `template.zip`),
-these travel with the image and are surfaced by ECR and AWS Inspector:
+these are tagged with the image and are surfaced by ECR and AWS Inspector:
 
 | Label                                 | Value                                      |
 | ------------------------------------- | ------------------------------------------ |
