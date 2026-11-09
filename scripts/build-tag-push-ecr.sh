@@ -50,8 +50,32 @@ for BUILD_SECRET in "${SECRETS[@]}"; do
     fi
 done
 
+# OCI provenance labels so the image links back to its source repository.
+# These are baked into the image config and surfaced by ECR / AWS Inspector,
+# unlike the S3 object metadata which never travels with the image.
+SOURCE_URL="${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY"
+BUILD_CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+OCI_LABELS=(
+    --label "org.opencontainers.image.source=$SOURCE_URL"
+    --label "org.opencontainers.image.revision=$GITHUB_SHA"
+    --label "org.opencontainers.image.version=${VERSION_NUMBER:-$GITHUB_SHA}"
+    --label "org.opencontainers.image.created=$BUILD_CREATED"
+)
+
+# Additional ECR tag derived from the source repo, using the current workflow
+# context. Docker tags cannot contain "/" or uppercase, so sanitise the
+# owner/repo value into a valid tag (e.g. govuk-one-login/my-app -> govuk-one-login_my-app).
+SOURCE_REPO_TAG=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr -c '[:alnum:]._-' '-' | cut -c1-128)
+SOURCE_TAG_OPTION=""
+if [ -n "$SOURCE_REPO_TAG" ]; then
+    echo "Tagging image with source repo tag $ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
+    SOURCE_TAG_OPTION="--tag $ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
+fi
+
 docker build \
     --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    $SOURCE_TAG_OPTION \
+    "${OCI_LABELS[@]}" \
     $TAG_OPTION \
     $PLATFORM_OPTION \
     $TARGET_OPTION \
@@ -61,6 +85,9 @@ docker build \
     "$DOCKER_BUILD_PATH"
 
 docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+if [ -n "$SOURCE_REPO_TAG" ]; then
+    docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
+fi
 if [ "$PUSH_LATEST_TAG" == "true" ]; then
     docker push "$ECR_REGISTRY/$ECR_REPO_NAME:latest"
 fi
@@ -68,6 +95,9 @@ fi
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     curl -s https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)' > /tmp/signing-config.json
     cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+    if [ -n "$SOURCE_REPO_TAG" ]; then
+        cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
+    fi
 fi
 
 
