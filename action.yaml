@@ -82,10 +82,10 @@ runs:
       if: ${{ inputs.checkout-repo == 'true' }}
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: Set up Python 3.8
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+    - name: Set up Python 3.13
+      uses: actions/setup-python@90485b7ad25ff6932f80015b8a56a6546cd816a7 # v7.1.0
       with:
-        python-version: "3.8"
+        python-version: "3.13"
 
     - name: Set up AWS creds
       uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
