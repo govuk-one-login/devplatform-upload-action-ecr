@@ -20,6 +20,38 @@ Pull in the action in your workflow as below, making sure to specify the release
     ecr-repo-name: ${{ secrets.ECR_REPOSITORY }}
 ```
 
+## Image provenance
+
+To make it easy to identify the source of an image (for example when triaging findings in AWS Inspector),
+the action links every image it builds back to the source repository.
+
+### OCI labels
+
+The following [OCI image annotation labels](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
+are baked into the image config at build time. Unlike the S3 object metadata (which stays with `template.zip`),
+these are tagged with the image and are surfaced by ECR and AWS Inspector:
+
+| Label                                 | Value                                      |
+| ------------------------------------- | ------------------------------------------ |
+| `org.opencontainers.image.source`     | Source repository URL (e.g. `https://github.com/<owner>/<repo>`) |
+| `org.opencontainers.image.revision`   | The commit SHA (`github.sha`)              |
+| `org.opencontainers.image.version`    | The `version-number` input, falling back to the commit SHA |
+| `org.opencontainers.image.created`    | The image build timestamp (UTC)            |
+
+You can inspect them on a pulled image with:
+
+```shell
+docker inspect --format '{{json .Config.Labels}}' <image> | jq
+```
+
+### Source repository tag
+
+In addition to the commit SHA tag, the image is pushed with a tag derived from the source repository
+(`github.repository`) using the current workflow context. Because Docker tags cannot contain `/` or
+uppercase characters, the `owner/repo` value is sanitised — for example `govuk-one-login/my-app`
+becomes the tag `govuk-one-login_my-app`. When container signing is enabled, this tag is signed
+alongside the SHA tag.
+
 ## Requirements
 
 - pre-commit:
