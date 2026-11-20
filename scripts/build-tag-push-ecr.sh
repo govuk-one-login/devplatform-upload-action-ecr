@@ -11,6 +11,28 @@ if [ -z $DOCKER_BUILD_PATH ]; then
     DOCKER_BUILD_PATH=$WORKING_DIRECTORY
 fi
 
+# Tag to use for the image: the override if supplied, otherwise the commit SHA
+IMAGE_TAG="${IMAGE_TAG_OVERRIDE:-$GITHUB_SHA}"
+
+# When a tag is pinned, skip build/push/sign if that tag is already in ECR
+SKIP_IMAGE_UPLOAD="false"
+if [ -n "${IMAGE_TAG_OVERRIDE:-}" ]; then
+    echo "Image tag override supplied: $IMAGE_TAG_OVERRIDE"
+    if DESCRIBE_OUTPUT=$(aws ecr describe-images \
+        --repository-name "$ECR_REPO_NAME" \
+        --image-ids imageTag="$IMAGE_TAG" 2>&1); then
+        echo "Image $ECR_REPO_NAME:$IMAGE_TAG already exists in ECR - skipping build, push and signing"
+        SKIP_IMAGE_UPLOAD="true"
+    elif [[ "$DESCRIBE_OUTPUT" == *ImageNotFoundException* ]]; then
+        echo "Image $ECR_REPO_NAME:$IMAGE_TAG not found in ECR - it will be built and pushed"
+    else
+        echo "ERROR: Unable to check whether $ECR_REPO_NAME:$IMAGE_TAG exists: $DESCRIBE_OUTPUT"
+        exit 1
+    fi
+fi
+
+if [ "$SKIP_IMAGE_UPLOAD" == "false" ]; then
+
 echo "Building image"
 
 PLATFORM_OPTION=""
@@ -51,7 +73,7 @@ for BUILD_SECRET in "${SECRETS[@]}"; do
 done
 
 docker build \
-    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" \
+    --tag "$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG" \
     $TAG_OPTION \
     $PLATFORM_OPTION \
     $TARGET_OPTION \
@@ -60,15 +82,17 @@ docker build \
     "${DOCKER_BUILD_SECRETS_EXPANDED[@]}" \
     "$DOCKER_BUILD_PATH"
 
-docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG"
 if [ "$PUSH_LATEST_TAG" == "true" ]; then
     docker push "$ECR_REGISTRY/$ECR_REPO_NAME:latest"
 fi
 
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     curl -s https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)' > /tmp/signing-config.json
-    cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+    cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG"
 fi
+
+fi # SKIP_IMAGE_UPLOAD
 
 
 if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
@@ -100,14 +124,14 @@ if [ "$BUILD_AND_PUSH_IMAGE_ONLY" == "false" ]; then
 
     if grep -q "CONTAINER-IMAGE-PLACEHOLDER" cf-template.yaml; then
         echo "Replacing \"CONTAINER-IMAGE-PLACEHOLDER\" with new ECR image ref"
-        sed -i "s|CONTAINER-IMAGE-PLACEHOLDER|$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA|" cf-template.yaml
+        sed -i "s|CONTAINER-IMAGE-PLACEHOLDER|$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG|" cf-template.yaml
     else
         echo "WARNING!!! Image placeholder text \"CONTAINER-IMAGE-PLACEHOLDER\" not found - uploading template anyway"
     fi
 
     if grep -q "GIT-SHA-PLACEHOLDER" cf-template.yaml; then
         echo "Replacing \"GIT-SHA-PLACEHOLDER\" with new ECR image tag"
-        sed -i "s|GIT-SHA-PLACEHOLDER|$GITHUB_SHA|" cf-template.yaml
+        sed -i "s|GIT-SHA-PLACEHOLDER|$IMAGE_TAG|" cf-template.yaml
     fi
 
     release_metadata=(
