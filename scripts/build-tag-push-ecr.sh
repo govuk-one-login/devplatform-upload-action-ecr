@@ -86,7 +86,7 @@ docker build \
 
 IMAGE_DIGEST=$(docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" | grep -oP 'sha256:[a-f0-9]{64}' | tail -1)
 echo "image-digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
-if [ -n "$SOURCE_REPO_TAG" ]; then
+if [ -n "$SOURCE_REPO_TAG" ] && [ "$PUSH_LATEST_TAG" == "true" ]; then
     docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
 fi
 if [ "$PUSH_LATEST_TAG" == "true" ]; then
