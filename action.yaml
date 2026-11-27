@@ -164,7 +164,7 @@ runs:
           --query 'images[0].imageManifest' --output text)
         MEDIA_TYPE=$(echo "$MANIFEST" | jq -r '.mediaType // empty')
         if [[ "$MEDIA_TYPE" == *"manifest.list"* ]] || [[ "$MEDIA_TYPE" == *"index"* ]]; then
-          SCAN_DIGEST=$(echo "$MANIFEST" | jq -r '.manifests[] | select(.mediaType | test("vnd.oci.image.manifest|vnd.docker.distribution.manifest.v2")) | select(.artifactType // "" | test("cosign") | not) | .digest' | head -1)
+          SCAN_DIGEST=$(echo "$MANIFEST" | jq -r '.manifests[] | select(.mediaType | test("vnd.oci.image.manifest|vnd.docker.distribution.manifest.v2")) | select(.artifactType // "" | test("cosign") | not) | select(.platform.architecture != "unknown") | .digest' | head -1)
           FILTER="{\"ecrImageHash\":[{\"comparison\":\"EQUALS\",\"value\":\"$SCAN_DIGEST\"}]}"
         else
           SCAN_DIGEST="$IMAGE_DIGEST"
