@@ -38,7 +38,7 @@ for f in findings:
     pkg_name = pkg.get("name", "")
     pkg_version = pkg.get("version", "")
     fixed_in = pkg.get("fixedInVersion", "")
-    file_path = pkg.get("filePath", "Dockerfile")
+    file_path = pkg.get("filePath", "Dockerfile").lstrip("/")
 
     cvss_scores = pkg_details.get("cvss", [])
     best_cvss = max((c.get("baseScore", 0) for c in cvss_scores), default=None)
@@ -48,6 +48,7 @@ for f in findings:
     lines = [description, ""]
     if pkg_name:
         lines.append(f"Package: {pkg_name} {pkg_version}")
+    file_path = pkg.get("filePath", "")
     if fixed_in:
         lines.append(f"Fixed in: {fixed_in}")
     if best_cvss is not None:
