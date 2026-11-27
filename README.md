@@ -46,11 +46,43 @@ docker inspect --format '{{json .Config.Labels}}' <image> | jq
 
 ### Source repository tag
 
-In addition to the commit SHA tag, the image is pushed with a tag derived from the source repository
-(`github.repository`) using the current workflow context. Because Docker tags cannot contain `/` or
-uppercase characters, the `owner/repo` value is sanitised — for example `govuk-one-login/my-app`
-becomes the tag `govuk-one-login_my-app`. When container signing is enabled, this tag is signed
-alongside the SHA tag.
+When `push-latest-tag: "true"` is set, the image is also pushed with a tag derived from the source
+repository (`github.repository`). Because Docker tags cannot contain `/` or uppercase characters,
+the `owner/repo` value is sanitised — for example `govuk-one-login/my-app` becomes the tag
+`govuk-one-login_my-app`. When container signing is enabled, this tag is signed alongside the SHA tag.
+
+This tag is intentionally only pushed when `push-latest-tag` is enabled, as it is a floating tag
+that requires ECR tag immutability to be disabled.
+
+## Inspector scan results
+
+The action can optionally poll AWS Inspector v2 for vulnerability findings after the image is pushed
+and upload them to the GitHub Security tab as SARIF.
+
+To enable, set `upload-scan-results: "true"` and add `security-events: write` to your workflow permissions:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+steps:
+  - name: Deploy SAM app to ECR
+    uses: govuk-one-login/devplatform-upload-action-ecr@<version_number>
+    with:
+      upload-scan-results: "true"
+      artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}
+      role-to-assume-arn: ${{ secrets.GH_ACTIONS_ROLE_ARN }}
+      ecr-repo-name: ${{ secrets.ECR_REPOSITORY }}
+```
+
+Findings are visible under the Security tab of the repository. They are only visible to users with
+write access, regardless of whether the repository is public.
+
+Requirements:
+- AWS Inspector v2 must be enabled in the account
+- The ECR repository must be configured for enhanced scanning
 
 ## Requirements
 

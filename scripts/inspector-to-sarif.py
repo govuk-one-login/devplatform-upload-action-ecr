@@ -22,7 +22,7 @@ for f in findings:
     cve = f.get("title", "UNKNOWN")
     severity = f.get("severity", "INFORMATIONAL")
     description = f.get("description", cve)
-    uri = next((r.get("url", "") for r in f.get("packageVulnerabilityDetails", {}).get("referenceUrls", [{}])), "")
+    uri = next(iter(f.get("packageVulnerabilityDetails", {}).get("referenceUrls", [])), "")
 
     if cve not in seen_rules:
         seen_rules.add(cve)

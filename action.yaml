@@ -153,18 +153,34 @@ runs:
       env:
         ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
         IMAGE_DIGEST: ${{ steps.upload-fargates.outputs.image-digest }}
+        GITHUB_SHA: ${{ github.sha }}
       shell: bash
       run: |
         echo "Waiting for Inspector scan to complete..."
+        MANIFEST=$(aws ecr batch-get-image \
+          --repository-name "$ECR_REPO_NAME" \
+          --image-ids imageTag="$GITHUB_SHA" \
+          --query 'images[0].imageManifest' --output text)
+        MEDIA_TYPE=$(echo "$MANIFEST" | jq -r '.mediaType // empty')
+        if [[ "$MEDIA_TYPE" == *"manifest.list"* ]] || [[ "$MEDIA_TYPE" == *"index"* ]]; then
+          SCAN_DIGEST=$(echo "$MANIFEST" | jq -r '.manifests[] | select(.mediaType | test("vnd.oci.image.manifest|vnd.docker.distribution.manifest.v2")) | select(.artifactType // "" | test("cosign") | not) | .digest' | head -1)
+          FILTER="{\"ecrImageHash\":[{\"comparison\":\"EQUALS\",\"value\":\"$SCAN_DIGEST\"}]}"
+        else
+          FILTER="{\"ecrImageRepositoryName\":[{\"comparison\":\"EQUALS\",\"value\":\"$ECR_REPO_NAME\"}],\"ecrImageTags\":[{\"comparison\":\"EQUALS\",\"value\":\"$GITHUB_SHA\"}]}"
+          SCAN_DIGEST=""
+        fi
+        COVERAGE_FILTER="${SCAN_DIGEST:+{\"ecrImageHash\":[{\"comparison\":\"EQUALS\",\"value\":\"$SCAN_DIGEST\"}]}}"
+        COVERAGE_FILTER="${COVERAGE_FILTER:-{\"ecrImageTags\":[{\"comparison\":\"EQUALS\",\"value\":\"$GITHUB_SHA\"}]}}"
         for i in $(seq 1 20); do
-          STATUS=$(aws inspector2 list-findings \
-            --filter-criteria "ecrImageHash=[{comparison: EQUALS, value: \"$IMAGE_DIGEST\"}]" \
-            --query 'length(findings)' --output text 2>/dev/null || echo "0")
-          [ "$STATUS" -gt "0" ] && break
+          STATUS=$(aws inspector2 list-coverage \
+            --filter-criteria "$COVERAGE_FILTER" \
+            --query 'coveredResources[0].scanStatus.statusCode' --output text 2>/dev/null || echo "PENDING")
+          echo "Inspector scan status: $STATUS"
+          [ "$STATUS" = "ACTIVE" ] && break
           sleep 15
         done
         aws inspector2 list-findings \
-          --filter-criteria "ecrImageHash=[{comparison: EQUALS, value: \"$IMAGE_DIGEST\"}]" \
+          --filter-criteria "$FILTER" \
           --output json | python3 ${{ github.action_path }}/scripts/inspector-to-sarif.py > inspector-scan.sarif
 
     - name: Upload Inspector scan results to GitHub Security
