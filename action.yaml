@@ -73,6 +73,15 @@ inputs:
     description: The version number of the application being deployed. This defaults to ""'
     required: false
     default: ""
+  upload-scan-results:
+    description: "Upload ECR/Inspector scan results to GitHub Security tab as SARIF. Requires security-events: write permission on the calling workflow."
+    required: false
+    default: "false"
+
+outputs:
+  image-digest:
+    description: "The digest of the pushed image, usable with AWS Inspector v2 to poll scan findings"
+    value: ${{ steps.upload-fargates.outputs.image-digest }}
 
 runs:
   using: "composite"
@@ -113,6 +122,7 @@ runs:
         cosign-release: "v3.0.6"
 
     - name: Upload Fargates to S3
+      id: upload-fargates
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
@@ -137,3 +147,29 @@ runs:
         VERSION_NUMBER: ${{ inputs.version-number }}
       run: ${{ github.action_path }}/scripts/build-tag-push-ecr.sh
       shell: bash
+
+    - name: Wait for Inspector scan and convert to SARIF
+      if: ${{ inputs.upload-scan-results == 'true' }}
+      env:
+        ECR_REPO_NAME: ${{ inputs.ecr-repo-name }}
+        IMAGE_DIGEST: ${{ steps.upload-fargates.outputs.image-digest }}
+      shell: bash
+      run: |
+        echo "Waiting for Inspector scan to complete..."
+        for i in $(seq 1 20); do
+          STATUS=$(aws inspector2 list-findings \
+            --filter-criteria "ecrImageHash=[{comparison: EQUALS, value: \"$IMAGE_DIGEST\"}]" \
+            --query 'length(findings)' --output text 2>/dev/null || echo "0")
+          [ "$STATUS" -gt "0" ] && break
+          sleep 15
+        done
+        aws inspector2 list-findings \
+          --filter-criteria "ecrImageHash=[{comparison: EQUALS, value: \"$IMAGE_DIGEST\"}]" \
+          --output json | python3 ${{ github.action_path }}/scripts/inspector-to-sarif.py > inspector-scan.sarif
+
+    - name: Upload Inspector scan results to GitHub Security
+      if: ${{ inputs.upload-scan-results == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: inspector-scan.sarif
+        category: ecr-image-scan

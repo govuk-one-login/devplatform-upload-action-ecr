@@ -84,7 +84,8 @@ docker build \
     "${DOCKER_BUILD_SECRETS_EXPANDED[@]}" \
     "$DOCKER_BUILD_PATH"
 
-docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
+IMAGE_DIGEST=$(docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA" | grep -oP 'sha256:[a-f0-9]{64}' | tail -1)
+echo "image-digest=$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
 if [ -n "$SOURCE_REPO_TAG" ]; then
     docker push "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
 fi
@@ -97,6 +98,14 @@ if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
     if [ -n "$SOURCE_REPO_TAG" ]; then
         cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
+    fi
+    echo "Note: cosign pushes a signature artifact to ECR alongside the image. Any untagged digests in this repo are cosign signature bundles, not images, and will not be scanned by Inspector."
+    COSIGN_DIGEST=$(aws ecr describe-images \
+        --repository-name "$ECR_REPO_NAME" \
+        --query "imageDetails[?imageDigest!='$IMAGE_DIGEST' && !not_null(imageTags)].imageDigest" \
+        --output text 2>/dev/null || true)
+    if [ -n "$COSIGN_DIGEST" ]; then
+        echo "Cosign signature artifact digest: $COSIGN_DIGEST"
     fi
 fi
 
