@@ -173,7 +173,7 @@ runs:
         for i in $(seq 1 20); do
           STATUS=$(aws inspector2 list-coverage \
             --filter-criteria "{\"resourceId\":[{\"comparison\":\"EQUALS\",\"value\":\"arn:aws:ecr:eu-west-2:$ACCOUNT_ID:repository/$ECR_REPO_NAME/$SCAN_DIGEST\"}]}" \
-            --query 'coveredResources[0].scanStatus.statusCode' --output text 2>/dev/null || echo "PENDING")
+            --query 'coveredResources[0].scanStatus.statusCode' --output text 2>/dev/null | head -1 || echo "PENDING")
           echo "Inspector scan status: $STATUS"
           [ "$STATUS" = "ACTIVE" ] && break
           sleep 15
