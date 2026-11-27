@@ -117,6 +117,8 @@ runs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         CONTAINER_SIGN_KMS_KEY_ARN: ${{ inputs.container-sign-kms-key-arn }}
         GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
         PUSH_LATEST_TAG: ${{ inputs.push-latest-tag }}
         BUILD_AND_PUSH_IMAGE_ONLY: ${{ inputs.build-and-push-image-only }}
         WORKING_DIRECTORY: ${{ inputs.working-directory }}
