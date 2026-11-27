@@ -67,7 +67,7 @@ OCI_LABELS=(
 # owner/repo value into a valid tag (e.g. govuk-one-login/my-app -> govuk-one-login_my-app).
 SOURCE_REPO_TAG=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr -c '[:alnum:]._-' '-' | cut -c1-128)
 SOURCE_TAG_OPTION=""
-if [ -n "$SOURCE_REPO_TAG" ]; then
+if [ -n "$SOURCE_REPO_TAG" ] && [ "$PUSH_LATEST_TAG" == "true" ]; then
     echo "Tagging image with source repo tag $ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
     SOURCE_TAG_OPTION="--tag $ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
 fi
@@ -96,7 +96,7 @@ fi
 if [ ${CONTAINER_SIGN_KMS_KEY_ARN} != "none" ]; then
     curl -s https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)' > /tmp/signing-config.json
     cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$GITHUB_SHA"
-    if [ -n "$SOURCE_REPO_TAG" ]; then
+    if [ -n "$SOURCE_REPO_TAG" ] && [ "$PUSH_LATEST_TAG" == "true" ]; then
         cosign sign --signing-config /tmp/signing-config.json --key "awskms:///${CONTAINER_SIGN_KMS_KEY_ARN}" "$ECR_REGISTRY/$ECR_REPO_NAME:$SOURCE_REPO_TAG"
     fi
     echo "Note: cosign pushes a signature artifact to ECR alongside the image. Any untagged digests in this repo are cosign signature bundles, not images, and will not be scanned by Inspector."
