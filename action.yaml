@@ -157,6 +157,7 @@ runs:
       shell: bash
       run: |
         echo "Waiting for Inspector scan to complete..."
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         MANIFEST=$(aws ecr batch-get-image \
           --repository-name "$ECR_REPO_NAME" \
           --image-ids imageTag="$GITHUB_SHA" \
@@ -166,14 +167,12 @@ runs:
           SCAN_DIGEST=$(echo "$MANIFEST" | jq -r '.manifests[] | select(.mediaType | test("vnd.oci.image.manifest|vnd.docker.distribution.manifest.v2")) | select(.artifactType // "" | test("cosign") | not) | .digest' | head -1)
           FILTER="{\"ecrImageHash\":[{\"comparison\":\"EQUALS\",\"value\":\"$SCAN_DIGEST\"}]}"
         else
+          SCAN_DIGEST="$IMAGE_DIGEST"
           FILTER="{\"ecrImageRepositoryName\":[{\"comparison\":\"EQUALS\",\"value\":\"$ECR_REPO_NAME\"}],\"ecrImageTags\":[{\"comparison\":\"EQUALS\",\"value\":\"$GITHUB_SHA\"}]}"
-          SCAN_DIGEST=""
         fi
-        COVERAGE_FILTER="${SCAN_DIGEST:+{\"ecrImageHash\":[{\"comparison\":\"EQUALS\",\"value\":\"$SCAN_DIGEST\"}]}}"
-        COVERAGE_FILTER="${COVERAGE_FILTER:-{\"ecrImageTags\":[{\"comparison\":\"EQUALS\",\"value\":\"$GITHUB_SHA\"}]}}"
         for i in $(seq 1 20); do
           STATUS=$(aws inspector2 list-coverage \
-            --filter-criteria "$COVERAGE_FILTER" \
+            --filter-criteria "{\"resourceId\":[{\"comparison\":\"EQUALS\",\"value\":\"arn:aws:ecr:eu-west-2:$ACCOUNT_ID:repository/$ECR_REPO_NAME/$SCAN_DIGEST\"}]}" \
             --query 'coveredResources[0].scanStatus.statusCode' --output text 2>/dev/null || echo "PENDING")
           echo "Inspector scan status: $STATUS"
           [ "$STATUS" = "ACTIVE" ] && break
